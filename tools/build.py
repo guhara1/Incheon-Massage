@@ -36,6 +36,8 @@ PHONE_DISP = "0508-202-4743"                        # 예약번호
 PHONE_TEL  = "+825082024743"                        # tel: 링크용
 HOURS      = "연중무휴 · 24시간 상담"
 INDEXNOW_KEY = "a7c41e9b8d2f4a6e9c3b5d7f1a2e4c68"   # IndexNow(빙·네이버 등) 인증 키
+NAVER_VERIFY = "1fdea23ba21b6683e5c9c98e6591f844bc7220b3"  # 네이버 서치어드바이저 사이트 소유확인(메인만)
+GOOGLE_VERIFY = ""                                  # (선택) 구글 서치콘솔 소유확인 코드
 UPDATED    = "2026-06-09"
 
 COMPANY = {
@@ -1086,6 +1088,13 @@ def page(path, title, desc, active, body, jsonld=None, og_type="website", noinde
             + json.dumps(b, ensure_ascii=False, separators=(",", ":")) + "</script>"
             for b in blocks)
     og_img = BASE_URL + "/assets/og-cover.jpg"
+    # 사이트 소유확인 메타는 루트(메인)에만 출력 — 네이버/구글은 루트 URL을 확인
+    verify = ""
+    if path == "/":
+        if NAVER_VERIFY:
+            verify += f'\n<meta name="naver-site-verification" content="{NAVER_VERIFY}">'
+        if GOOGLE_VERIFY:
+            verify += f'\n<meta name="google-site-verification" content="{GOOGLE_VERIFY}">'
     return f"""<!doctype html>
 <html lang="ko">
 <head>
@@ -1094,7 +1103,7 @@ def page(path, title, desc, active, body, jsonld=None, og_type="website", noinde
 <meta name="theme-color" content="#0b0b0e">
 <meta name="format-detection" content="telephone=no">
 <meta name="robots" content="{robots}">
-<meta name="googlebot" content="{gbot}">
+<meta name="googlebot" content="{gbot}">{verify}
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <title>{title}</title>
 <meta name="description" content="{desc}">
