@@ -7,7 +7,7 @@
 > 설계 기준: `BLUEPRINT.md`(강서 프로젝트 재사용 플레이북) — 다크 럭스 디자인, 전용 페이지 링크아웃,
 > 도어웨이 회피, E-E-A-T, IndexNow 자동 색인.
 
-## 구조 (총 226페이지)
+## 구조 (총 237페이지)
 
 ```
 /                              홈 (인천 출장마사지·홈타이 허브)
@@ -23,6 +23,8 @@
 /theme/<테마>/                 테마 14 (스웨디시·로미로미·타이·중국·아로마·홈케어·호텔식·발·스포츠경락·스킨케어·왁싱·커플·24시간·수면)
 /course/                       코스안내 허브
 /course/<코스>/                코스 8 (fatigue·aroma·sports·hometai·couple·group·price·guide)
+/magazine/                     매거진 허브
+/magazine/<slug>/              칼럼 10편 (코스 선택·역세권 팁·홈타이·테마 비교·예약·위생·스포츠·커플·수면·요금)
 /reservation/ /guide/ /reviews/ /customer/   예약·가이드·후기·고객센터
 /privacy/ /terms/ /youth/      정책 3
 sitemap.xml robots.txt site.webmanifest _redirects   메타 파일
