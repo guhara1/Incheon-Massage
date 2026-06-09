@@ -17,6 +17,7 @@ Output: HTML files + sitemap.xml + robots.txt + site.webmanifest + _redirects
 
 import os
 import json
+import hashlib
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -612,6 +613,23 @@ TIME_PRICING = [
     {"name": "90분 코스", "price": "120,000", "dur": "90분", "desc": "아로마 포함 추천 구성", "best": True},
     {"name": "120분 코스", "price": "150,000", "dur": "120분", "desc": "전신 집중 프리미엄 케어"},
 ]
+
+# 랜드마크 데이터 정규화 — 각 항목 끝의 '인근'/'일대'를 제거해 본문에서 '인근 인근' 중복 방지.
+def _strip_lm(s):
+    s = s.strip()
+    for suf in (" 인근", " 일대"):
+        if s.endswith(suf):
+            s = s[:-len(suf)]
+    return s.strip()
+
+def _clean_lm(s):
+    parts = [_strip_lm(p.strip()) for p in s.split(",")]
+    return ", ".join(p for p in parts if p)
+
+for _a in AREAS:
+    for _d in _a["dongs"]:
+        _d["landmarks"] = _clean_lm(_d["landmarks"])
+STATION_DATA = {k: (v[0], v[1], _clean_lm(v[2]), v[3]) for k, v in STATION_DATA.items()}
 
 # ---------------------------------------------------------------------------
 # Shared CSS  (design system from BLUEPRINT.md — 다크 럭스 스파)
@@ -1313,6 +1331,134 @@ def content_page(path, active, trail, *, title, desc, eyebrow, h1, lead,
         THIN_PAGES.append((len(main_txt), path))
     write(path, page(path, title, desc, active, body, jsonld, og_type="article", noindex=noindex))
 
+# ---------------------------------------------------------------------------
+# 변형 헬퍼 — title/description/본문 섹션을 페이지별로 다양화(중복·복사·유사 방지).
+# 슬러그 해시로 결정적 회전 → 빌드마다 동일하지만 페이지마다 다른 변형을 선택.
+# ---------------------------------------------------------------------------
+def _h(key):
+    return int(hashlib.md5(key.encode("utf-8")).hexdigest(), 16)
+
+def hpick(key, seq):
+    return seq[_h(key) % len(seq)]
+
+def hsubset(key, seq, k):
+    n = len(seq); start = _h(key) % n
+    return [seq[(start + i) % n] for i in range(k)]
+
+def short_lm(landmarks):
+    first = landmarks.split(",")[0].strip()
+    return first.replace(" 인근", "").replace(" 일대", "")
+
+def station_lm(NM, landmarks):
+    """역명 자체와 겹치지 않는 첫 랜드마크(예: 송도역→옥련동)."""
+    items = [p.strip() for p in landmarks.split(",") if p.strip()]
+    for it in items:
+        base = it.replace(" 인근", "").replace(" 일대", "")
+        if base not in (NM, NM + "역") and not base.startswith(NM + "역"):
+            return base
+    return short_lm(landmarks)
+
+# 본문 테마 링크 회전용 풀(마사지 성격 테마 위주)
+THEME_LINK_POOL = [(t["slug"], t["name"]) for t in THEMES
+                   if t["slug"] in ("swedish", "aroma", "thai", "sports", "homecare",
+                                    "hotel", "lomi", "foot", "chinese", "sleep")]
+
+def theme_links_block(key, intro_subject):
+    """페이지별로 다른 테마 3개를 노출하는 (인트로문장, ul항목들) 반환."""
+    picks = hsubset(key, THEME_LINK_POOL, 3)
+    names = "·".join(n for _, n in picks)
+    intro = f"{intro_subject}에서는 {names} 등 방문 관리 문의가 많습니다. 원하는 테마와 코스는 아래에서 확인하세요."
+    ul = ['<a href="/theme/">전체 테마 보기</a>']
+    ul += [f'<a href="/theme/{s}/">{n}</a>' for s, n in picks]
+    ul += ['<a href="/course/">코스안내</a>', '<a href="/course/price/">가격 안내</a>']
+    return intro, ul
+
+# ---- 구·군 title/desc ----
+def gu_title(N):
+    return hpick(N, [
+        f"{N} 출장마사지·홈타이 | 인천 {N} 방문 마사지 예약",
+        f"인천 {N} 출장마사지·홈타이 — {N} 전역 방문 예약 안내",
+        f"{N} 홈타이·출장마사지 방문 예약 | 인천 {N} 건강관리",
+    ])
+
+def gu_desc(N, dongs, summary):
+    names = ", ".join(d["name"] for d in dongs[:5])
+    return hpick(N, [
+        f"{N} 출장마사지·홈타이 안내 - {names} 등 대표 동 방문 건강관리 예약 안내입니다. {summary}",
+        f"인천 {N} 출장마사지·홈타이 예약 안내. {summary} {names} 등 대표 동으로 방문합니다.",
+        f"{N} 홈타이·출장마사지 방문 예약 - {summary} {names} 일대를 안내합니다.",
+    ])
+
+# ---- 동 title/desc/lead ----
+def dong_title(N, G, lm):
+    L = short_lm(lm)
+    return hpick(N + G, [
+        f"{N} 출장마사지·홈타이 | 인천 {G} {N} 방문 예약 안내",
+        f"인천 {G} {N} 출장마사지·홈타이 예약 — {N} 방문 마사지",
+        f"{N} 홈타이·출장마사지 | 인천 {G} {N} 방문 건강관리",
+        f"인천 {N} 출장마사지·홈타이 — {G} {N} 방문 예약",
+        f"{L} 인근 {N} 출장마사지·홈타이 | 인천 {G} 방문",
+        f"{N} 출장마사지·홈타이 방문 예약 | 인천 {G} {L} 일대",
+    ])
+
+def dong_desc(N, G, C, lm, A):
+    L = short_lm(lm)
+    return hpick(N + lm, [
+        f"인천 {G} {N} 출장마사지·홈타이 예약 안내입니다. {N}은 {C}입니다. {L} 인근 자택·숙소로 평균 {A}분 내외 방문하며 코스·요금·예약 시간을 안내합니다.",
+        f"{N} 출장마사지·홈타이 — {C}인 {N} 일대를 {L} 중심으로 방문하는 건강관리 예약 안내입니다. 60·90·120분 코스와 도착 시간을 확인해보세요.",
+        f"인천 {N}({G}) 출장마사지·홈타이 안내. {N}은 {C}이며, {L} 인근 생활권으로 평균 {A}분 내외 방문합니다.",
+        f"{N} 홈타이·출장마사지 방문 예약. {C}인 {N}을 {L} 인근까지 안내하며, 코스 선택과 위생·안전 기준을 확인하실 수 있습니다.",
+        f"인천 {G} {L} 인근 {N} 출장마사지·홈타이 방문 예약 안내. {C}인 {N}까지 평균 {A}분 내외로 자택·숙소·오피스텔로 방문합니다.",
+    ])
+
+def dong_lead(N, G, C, lm, A):
+    L = short_lm(lm)
+    return hpick(N, [
+        f"인천 {G} {N}({C})에서 출장마사지·홈타이 예약을 찾는 분들을 위한 안내입니다. {N}은 {L} 인근 생활권과 가까워 자택·숙소·오피스텔 방문 문의가 많으며, 평균 {A}분 내외로 도착합니다.",
+        f"{C}인 {N}은 {L} 인근을 중심으로 인천 {G} 출장마사지·홈타이를 방문 안내합니다. 평균 {A}분 내외로 도착하며, 코스와 예약 시간을 함께 확인하실 수 있습니다.",
+        f"인천 {G} {N} 일대로 방문하는 출장마사지·홈타이 예약 안내입니다. {C}인 {N}을 {L} 인근까지 평균 {A}분 내외로 방문합니다.",
+    ])
+
+# ---- 역 title/desc/lead ----
+def station_title(NM, G, line_short_list, transfer, lm):
+    L = station_lm(NM, lm); LS = line_short_list[0]
+    tag = "환승역" if transfer else f"{LS} 역세권"
+    return hpick(NM + G, [
+        f"{NM}역 출장마사지·홈타이 | 인천 {G} {L} 인근 방문 예약",
+        f"인천 {G} {NM}역 출장마사지·홈타이 — {tag} 방문 안내",
+        f"{NM}역 홈타이·출장마사지 | 인천 {G} {L} 인근 예약",
+        f"인천 {NM}역 출장마사지·홈타이 — {G} 역세권 예약 안내",
+        f"{NM}역({tag}) 출장마사지·홈타이 | 인천 {G} 방문",
+        f"{L} 인근 {NM}역 출장마사지·홈타이 | 인천 {G} 예약",
+    ])
+
+def station_desc(NM, G, line_names, transfer, lm, A):
+    L = station_lm(NM, lm); lines = "·".join(line_names)
+    tw = " 환승역" if transfer else ""
+    return hpick(NM + lm, [
+        f"{NM}역 출장마사지·홈타이 안내입니다. {lines}{tw} {NM}역 인근({L}) 자택·숙소로 평균 {A}분 내외 방문하며 코스·예약 시간을 안내합니다.",
+        f"인천 {G} {NM}역 출장마사지·홈타이 예약 — {L} 인근 역세권으로 방문합니다. {lines} 인근 방문과 60·90·120분 코스를 확인하세요.",
+        f"{NM}역 홈타이·출장마사지 방문 예약 안내. 인천 {G} {NM}역({L}) 생활권으로 평균 {A}분 내외 방문하며 위생·요금 기준을 확인하실 수 있습니다.",
+        f"인천 {G} {L} 인근 {NM}역 출장마사지·홈타이 방문 예약. {lines} 역세권 자택·오피스텔·숙소로 평균 {A}분 내외 안내합니다.",
+        f"{NM}역세권({L}) 출장마사지·홈타이 안내 — 인천 {G}에서 {lines} {NM}역 인근을 평균 {A}분 내외로 방문합니다.",
+    ])
+
+def station_lead(NM, G, line_sentence, lm, A):
+    L = station_lm(NM, lm)
+    return hpick(NM, [
+        f"{NM}역 인근에서 출장마사지·홈타이 예약을 찾는 분들을 위한 안내입니다. {line_sentence} {L} 인근 생활권으로 평균 {A}분 내외로 방문합니다.",
+        f"인천 {G} {NM}역세권({L} 일대)으로 방문하는 출장마사지·홈타이 예약 안내입니다. {line_sentence} 평균 {A}분 내외로 도착합니다.",
+        f"{line_sentence} {NM}역 인근 {L} 생활권으로 출장마사지·홈타이를 방문 안내하며, 평균 {A}분 내외로 도착합니다.",
+    ])
+
+# ---- 노선 title ----
+def line_title(LN):
+    return hpick(LN, [
+        f"{LN} 역세권 | 인천 출장마사지·홈타이 방문 안내",
+        f"인천 출장마사지·홈타이 — {LN} 역세권 방문 예약",
+        f"{LN} 출장마사지·홈타이 | 역세권 인근 방문 안내",
+    ])
+
 # ===========================================================================
 # PAGE BUILDERS
 # ===========================================================================
@@ -1914,9 +2060,8 @@ def build_gu_pages():
         top_links = [("tel:" + PHONE_TEL, "예약문의", True), ("/incheon/area/", "지역별 안내"),
                      ("/incheon/", "인천 출장마사지 대표"), ("/incheon/stations/", "지하철역별 안내")]
         content_page(f"/incheon/{a['slug']}/", "area", trail,
-            title=f"{a['name']} 출장마사지·홈타이 | 인천 {a['name']} 방문 마사지",
-            desc=f"{a['name']} 출장마사지·홈타이 안내 - " + ", ".join(d['name'] for d in a['dongs'][:5]) +
-                 f" 등 대표 동 방문 건강관리 예약 안내입니다. {a['summary']}",
+            title=gu_title(a['name']),
+            desc=gu_desc(a['name'], a['dongs'], a['summary']),
             eyebrow=f"인천 · {a['name']}", h1=f"{a['name']} 출장마사지·홈타이", lead=a["summary"],
             sections=sections, faq=gu_faq, top_links=top_links, show_price=True,
             cta_title=f"{a['name']} 방문 예약을 도와드릴까요?",
@@ -1959,6 +2104,7 @@ def build_dong_pages():
             region_links += [f'<a href="/incheon/{a["slug"]}/{s["slug"]}/">{s["name"]}</a>' for s in siblings[:6]]
             region_tail = d["sub_note"] if d.get("sub_note") else \
                 f"{a['name']}은 생활권이 이어져 있어 인근 동과 함께 안내드리는 경우가 많습니다."
+            dong_theme_intro, dong_theme_ul = theme_links_block(slug, f"{name}({d['character']})")
 
             sections = [
                 (f"{name} 출장마사지·홈타이 이용 안내", [
@@ -1970,10 +2116,8 @@ def build_dong_pages():
                     f"{name}과 가까운 같은 {a['name']} 대표 동도 함께 확인할 수 있습니다.",
                     ("ul", region_links), region_tail]),
                 (f"{name}에서 많이 찾는 관리", [
-                    f"{name}({d['character']})에서는 스웨디시·아로마테라피·홈케어·스포츠 관리 문의가 많습니다. 테마와 코스는 아래 링크에서 확인하세요.",
-                    ("ul", ['<a href="/theme/">전체 테마 보기</a>', '<a href="/theme/swedish/">스웨디시</a>',
-                            '<a href="/theme/aroma/">아로마테라피</a>', '<a href="/theme/homecare/">홈케어</a>',
-                            '<a href="/course/">코스안내</a>', '<a href="/course/price/">가격 안내</a>'])]),
+                    dong_theme_intro,
+                    ("ul", dong_theme_ul)]),
                 (f"{name} 예약·준비·위생 안내", [
                     f"{name} 방문 예약은 시간대와 배정 상황에 따라 가능 여부가 달라지며, 평균 {d['arrival']}분 내외로 도착합니다. 저녁·주말은 문의가 몰릴 수 있어 사전 예약을 권장드립니다.",
                     "예약 가능 시간, 방문 전 준비물, 위생·안전 기준은 페이지마다 반복하지 않고 전용 안내에서 자세히 확인하실 수 있습니다.",
@@ -1994,11 +2138,10 @@ def build_dong_pages():
                 (f"{name}에서는 어떤 관리가 인기인가요?",
                  f"{name}에서는 스웨디시·아로마테라피·홈케어 관리 문의가 많습니다. 목적과 컨디션에 따라 선택하시면 되며, 자세한 내용은 테마별 안내에서 확인하실 수 있습니다."),
             ]
-            lead = (f"인천 {a['name']} {name}({d['character']})에서 출장마사지·홈타이 예약을 찾는 분들을 위한 안내입니다. "
-                    f"{name}은 {first_lm} 인근 생활권과 가까워 주거지·숙소·오피스텔 방문 문의가 많으며, 평균 {d['arrival']}분 내외로 도착합니다.")
+            lead = dong_lead(name, a['name'], d['character'], d['landmarks'], d['arrival'])
             content_page(path, "area", trail,
-                title=f"{name} 출장마사지·홈타이 | 인천 {a['name']} {name} 방문 예약",
-                desc=f"인천 {a['name']} {name} 출장마사지·홈타이 안내 페이지입니다. {d['landmarks']} 인근 방문 가능 생활권과 예약 가능 시간, 코스 선택 기준을 확인해보세요.",
+                title=dong_title(name, a['name'], d['landmarks']),
+                desc=dong_desc(name, a['name'], d['character'], d['landmarks'], d['arrival']),
                 eyebrow=f"{a['name']} · {name}", h1=f"{name} 출장마사지·홈타이 예약 안내", lead=lead,
                 sections=sections, faq=dong_faq,
                 data_note=f"{name} 일대는 평균 {d['arrival']}분 내외로 도착합니다(예약 데이터 기준). 저녁·주말은 문의가 몰려 도착이 다소 길어질 수 있어 사전 예약을 권장드립니다.",
@@ -2063,7 +2206,7 @@ def build_line_pages():
                          "url": BASE_URL + f"/incheon/stations/{STATION_DATA[nm][0]}/"}
                         for nm in LINE_STATIONS[key]]}
         write(f"/incheon/stations/line/{key}/", page(f"/incheon/stations/line/{key}/",
-            f"{l['name']} 역세권 | 인천 출장마사지·홈타이 방문 안내",
+            line_title(l['name']),
             f"{l['name']} 역세권 출장마사지·홈타이 안내 - " + "·".join(LINE_STATIONS[key][:6]) +
             "역 등 인근 방문 안내를 제공합니다.",
             "stations", body, [bc_ld(trail), item_list]))
@@ -2105,6 +2248,7 @@ def build_station_pages():
             zone_blocks += [("h3", "환승역 안내"), other_lines]
         zone_blocks += [("h3", "주거지·숙소 방문 안내"),
             f"{nm}역 인근에서는 {first_lm} 등 역세권 자택·오피스텔·숙소로 방문합니다. 공동현관 출입 방법과 정확한 주소, 동·호수를 함께 알려주시면 도착이 한결 빨라집니다."]
+        st_theme_intro, st_theme_ul = theme_links_block(slug, f"{nm}역 인근")
 
         sections = [
             (f"{nm}역 출장마사지·홈타이 이용 안내", [
@@ -2116,10 +2260,8 @@ def build_station_pages():
                 nearby,
                 f"가까운 노선 정보는 " + "·".join(f'<a href="/incheon/stations/line/{k}/">{LINE_SHORT[k]}</a>' for k in keys) + " 노선 안내에서도 확인하실 수 있습니다."]),
             (f"{nm}역 인근에서 많이 찾는 관리", [
-                f"{nm}역 인근에서는 스웨디시·아로마테라피·홈케어·스포츠 관리 문의가 많습니다. 테마와 코스는 아래 링크에서 확인하세요.",
-                ("ul", ['<a href="/theme/">전체 테마 보기</a>', '<a href="/theme/swedish/">스웨디시</a>',
-                        '<a href="/theme/aroma/">아로마테라피</a>', '<a href="/theme/homecare/">홈케어</a>',
-                        '<a href="/course/">코스안내</a>', '<a href="/course/price/">가격 안내</a>'])]),
+                st_theme_intro,
+                ("ul", st_theme_ul)]),
             (f"{nm}역 방문 팁", [
                 f"{nm}역 인근은 {gu} 생활권에 속해, 저녁·주말 시간대에 방문 문의가 몰리는 편입니다. 원하는 시간이 정해져 있다면 미리 예약하실수록 일정 조율이 수월합니다.",
                 f"예약 시 {nm}역 몇 번 출구 방향인지, 가까운 건물이나 랜드마크가 무엇인지 함께 알려주시면 위치 파악이 빨라져 도착 시간을 줄일 수 있습니다."]),
@@ -2143,11 +2285,10 @@ def build_station_pages():
             (f"{nm}역 인근 당일 예약이 되나요?",
              "가능합니다. 시간대와 위치에 따라 방문 가능 시간이 달라질 수 있어 상담 시 확인해 드립니다."),
         ]
-        lead = (f"{nm}역 인근에서 출장마사지·홈타이 예약을 찾는 분들을 위한 안내입니다. "
-                f"{line_sentence} {landmark} 인근 생활권으로 평균 {arr}분 내외로 방문합니다.")
+        lead = station_lead(nm, gu, line_sentence, landmark, arr)
         content_page(path, "stations", trail,
-            title=f"{nm}역 출장마사지·홈타이 | 인천 {gu} 역세권 방문 예약",
-            desc=f"{nm}역 출장마사지·홈타이 안내 페이지입니다. {'·'.join(line_names)} {nm}역 인근({landmark}) 방문 가능 생활권과 예약 가능 시간, 코스를 확인해보세요.",
+            title=station_title(nm, gu, [LINE_SHORT[k] for k in keys], transfer, landmark),
+            desc=station_desc(nm, gu, line_names, transfer, landmark, arr),
             eyebrow=f"인천 {gu} · {nm}역", h1=f"{nm}역 출장마사지·홈타이", lead=lead,
             sections=sections, faq=st_faq,
             data_note=f"{nm}역 인근은 평균 {arr}분 내외로 도착합니다(예약 데이터 기준). 출구·정확한 위치에 따라 달라지니 예약 시 주소를 알려주시면 빠르게 안내해 드립니다.",
