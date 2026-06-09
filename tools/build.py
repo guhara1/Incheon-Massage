@@ -1128,6 +1128,7 @@ def page(path, title, desc, active, body, jsonld=None, og_type="website", noinde
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="manifest" href="/site.webmanifest">
+<link rel="alternate" type="application/rss+xml" title="{BRAND} 매거진" href="{BASE_URL}/rss.xml">
 <style>{CSS}</style>
 {ld}
 </head>
@@ -3501,13 +3502,25 @@ def all_urls():
     return out
 
 def build_meta_files():
+    import datetime as _dt
+    def xml_esc(s):
+        return (s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+                 .replace('"', "&quot;").replace("'", "&apos;"))
+    WD = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+    MO = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+    base_date = _dt.date.fromisoformat(UPDATED)
+    def rfc822(d, mm=0):
+        return f"{WD[d.weekday()]}, {d.day:02d} {MO[d.month-1]} {d.year} 09:{mm:02d}:00 +0900"
+
+    # ---- sitemap.xml (lastmod 포함 → 구글 신선도 판단) ----
     urls = all_urls()
     prio = {"/": "1.0"}
     items = ""
     for u in urls:
         p = prio.get(u, "0.9" if u.count("/") <= 2 else ("0.8" if u.count("/") <= 3 else "0.75"))
-        freq = "daily" if u == "/" else "weekly"
+        freq = "daily" if u in ("/", "/magazine/") else "weekly"
         items += (f"  <url><loc>{BASE_URL}{u}</loc>"
+                  f"<lastmod>{UPDATED}</lastmod>"
                   f"<changefreq>{freq}</changefreq><priority>{p}</priority></url>\n")
     sitemap = ('<?xml version="1.0" encoding="UTF-8"?>\n'
                '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
@@ -3515,12 +3528,53 @@ def build_meta_files():
     with open(os.path.join(ROOT, "sitemap.xml"), "w", encoding="utf-8") as f:
         f.write(sitemap)
 
-    robots = ("User-agent: *\nAllow: /\nDisallow: /tools/\n\n"
-              "User-agent: GPTBot\nAllow: /\n"
-              "User-agent: ClaudeBot\nAllow: /\n"
-              "User-agent: Google-Extended\nAllow: /\n\n"
-              f"Sitemap: {BASE_URL}/sitemap.xml\n"
-              f"Host: {BASE_URL.replace('https://','')}\n")
+    # ---- rss.xml (매거진 피드 — 네이버 RSS 제출/콘텐츠 발견용) ----
+    rss_items = ""
+    for i, m in enumerate(MAGAZINE):
+        link = f"{BASE_URL}/magazine/{m['slug']}/"
+        rss_items += (
+            "  <item>\n"
+            f"    <title>{xml_esc(m['h1'])}</title>\n"
+            f"    <link>{link}</link>\n"
+            f'    <guid isPermaLink="true">{link}</guid>\n'
+            f"    <category>{xml_esc(m['cat'])}</category>\n"
+            f"    <description>{xml_esc(m['desc'])}</description>\n"
+            f"    <pubDate>{rfc822(base_date, 59 - i)}</pubDate>\n"
+            "  </item>\n")
+    rss = (
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        '<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">\n'
+        "<channel>\n"
+        f"  <title>{xml_esc(BRAND)} 매거진</title>\n"
+        f"  <link>{BASE_URL}/magazine/</link>\n"
+        f'  <atom:link href="{BASE_URL}/rss.xml" rel="self" type="application/rss+xml"/>\n'
+        "  <description>인천 출장마사지·홈타이를 더 잘 이용하는 가이드 칼럼</description>\n"
+        "  <language>ko-KR</language>\n"
+        f"  <lastBuildDate>{rfc822(base_date, 0)}</lastBuildDate>\n"
+        f"  <pubDate>{rfc822(base_date, 0)}</pubDate>\n"
+        "  <ttl>1440</ttl>\n"
+        + rss_items + "</channel>\n</rss>\n")
+    with open(os.path.join(ROOT, "rss.xml"), "w", encoding="utf-8") as f:
+        f.write(rss)
+
+    # ---- robots.txt (네이버 Yeti·다음 Daumoa 등 명시 허용 + 사이트맵/RSS) ----
+    robots = (
+        "User-agent: *\n"
+        "Allow: /\n"
+        "Disallow: /tools/\n\n"
+        "# 검색엔진 크롤러 (명시 허용)\n"
+        "User-agent: Googlebot\nAllow: /\n"
+        "User-agent: bingbot\nAllow: /\n"
+        "User-agent: Yeti\nAllow: /\n"            # 네이버
+        "User-agent: Daumoa\nAllow: /\n"          # 다음(카카오)
+        "User-agent: Yandex\nAllow: /\n\n"
+        "# AI 크롤러\n"
+        "User-agent: GPTBot\nAllow: /\n"
+        "User-agent: ClaudeBot\nAllow: /\n"
+        "User-agent: Google-Extended\nAllow: /\n\n"
+        f"Sitemap: {BASE_URL}/sitemap.xml\n"
+        f"Sitemap: {BASE_URL}/rss.xml\n"
+        f"Host: {BASE_URL.replace('https://', '')}\n")
     with open(os.path.join(ROOT, "robots.txt"), "w", encoding="utf-8") as f:
         f.write(robots)
 

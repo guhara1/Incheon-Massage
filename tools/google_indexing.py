@@ -16,14 +16,15 @@
   5) 환경변수 GOOGLE_APPLICATION_CREDENTIALS=서비스계정.json
 
 사용법:
-  python3 tools/google_indexing.py --all          # sitemap.xml 전체
+  python3 tools/google_indexing.py --all          # sitemap.xml 전체(쿼터 200/일 주의)
+  python3 tools/google_indexing.py --changed      # 직전 커밋 대비 바뀐 페이지만(권장)
   python3 tools/google_indexing.py https://.../a/  # 특정 URL
   python3 tools/google_indexing.py --all --delete  # 색인 삭제 통보(URL_DELETED)
 """
-import os, sys, json, re, glob, urllib.request, urllib.error
+import os, sys, json, re, glob, subprocess, urllib.request, urllib.error
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-BASE = "https://gangseo-massage.pages.dev"
+BASE = "https://incheon-massage.pages.dev"
 API = "https://indexing.googleapis.com/v3/urlNotifications:publish"
 SCOPE = "https://www.googleapis.com/auth/indexing"
 
@@ -47,6 +48,32 @@ def urls_from_sitemap():
     return re.findall(r"<loc>([^<]+)</loc>", open(sm, encoding="utf-8").read())
 
 
+def path_to_url(rel):
+    rel = rel.replace(os.sep, "/")
+    if rel == "index.html":
+        return BASE + "/"
+    if rel.endswith("/index.html"):
+        return BASE + "/" + rel[:-len("index.html")]
+    return None
+
+
+def urls_changed():
+    """직전 커밋 대비 변경된 index.html → URL (없으면 빈 목록)."""
+    try:
+        out = subprocess.check_output(
+            ["git", "diff", "--name-only", "--diff-filter=ACMR", "HEAD~1", "HEAD"],
+            cwd=ROOT, text=True)
+    except subprocess.CalledProcessError:
+        out = ""
+    urls = []
+    for f in out.splitlines():
+        if f.endswith("index.html"):
+            u = path_to_url(f)
+            if u:
+                urls.append(u)
+    return urls
+
+
 def publish(url, token, typ):
     body = json.dumps({"url": url, "type": typ}).encode("utf-8")
     req = urllib.request.Request(API, data=body, headers={
@@ -64,6 +91,11 @@ def main(argv):
     args = [a for a in argv if a not in ("--delete",)]
     if "--all" in args:
         urls = urls_from_sitemap()
+    elif "--changed" in args:
+        urls = urls_changed()
+        if not urls:
+            print("변경된 페이지가 없습니다.")
+            return 0
     else:
         urls = [a for a in args if a.startswith("http")]
     if not urls:

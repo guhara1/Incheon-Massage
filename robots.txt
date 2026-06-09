@@ -2,6 +2,19 @@ User-agent: *
 Allow: /
 Disallow: /tools/
 
+# 검색엔진 크롤러 (명시 허용)
+User-agent: Googlebot
+Allow: /
+User-agent: bingbot
+Allow: /
+User-agent: Yeti
+Allow: /
+User-agent: Daumoa
+Allow: /
+User-agent: Yandex
+Allow: /
+
+# AI 크롤러
 User-agent: GPTBot
 Allow: /
 User-agent: ClaudeBot
@@ -10,4 +23,5 @@ User-agent: Google-Extended
 Allow: /
 
 Sitemap: https://incheon-massage.pages.dev/sitemap.xml
+Sitemap: https://incheon-massage.pages.dev/rss.xml
 Host: incheon-massage.pages.dev

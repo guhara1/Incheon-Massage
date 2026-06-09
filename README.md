@@ -27,7 +27,7 @@
 /magazine/<slug>/              칼럼 10편 (코스 선택·역세권 팁·홈타이·테마 비교·예약·위생·스포츠·커플·수면·요금)
 /reservation/ /guide/ /reviews/ /customer/   예약·가이드·후기·고객센터
 /privacy/ /terms/ /youth/      정책 3
-sitemap.xml robots.txt site.webmanifest _redirects   메타 파일
+sitemap.xml rss.xml robots.txt site.webmanifest _redirects   메타 파일
 favicon.svg favicon.ico icon-*.png assets/og-cover.jpg   브랜드 이미지
 ```
 
@@ -64,29 +64,55 @@ python3 tools/build.py      # 모든 HTML + sitemap/robots/manifest/_redirects +
 python3 tools/gen_icons.py  # 파비콘 / PWA 아이콘 / OG 이미지 생성 (Pillow 필요)
 ```
 
-## 색인 즉시 통보 (IndexNow / Google / sitemap)
+## 색인을 가장 빠르게 (IndexNow + 사이트맵 + RSS)
+
+생성되는 색인 자산:
+- `sitemap.xml` — 전 237페이지 + `<lastmod>`(구글 신선도 판단)
+- `rss.xml` — 매거진 피드 10편(네이버 RSS 제출·콘텐츠 발견용). 전 페이지 `<head>`에 RSS 링크 포함
+- `robots.txt` — Googlebot·bingbot·**Yeti(네이버)**·**Daumoa(다음)**·Yandex 명시 허용 + 사이트맵/RSS 위치
+- `a7c41e9b8d2f4a6e9c3b5d7f1a2e4c68.txt` — IndexNow 인증 키(루트 노출)
 
 ### 1) IndexNow — 빙·네이버·얀덱스 즉시 통보 (권장, 무료·무설정)
-- 인증 키 파일은 빌드 시 자동 생성: `a7c41e9b8d2f4a6e9c3b5d7f1a2e4c68.txt`
-  → 배포되면 `https://incheon-massage.pages.dev/a7c41e9b8d2f4a6e9c3b5d7f1a2e4c68.txt` 로 노출
-- 수동 제출:
-  ```bash
-  python3 tools/indexnow.py --all        # sitemap 전체
-  python3 tools/indexnow.py --changed    # 직전 커밋 대비 바뀐 페이지만
-  python3 tools/indexnow.py --all --dry-run   # 전송 없이 목록 확인
-  ```
-- **자동화**: `.github/workflows/indexnow.yml` 가 `main`에 페이지/사이트맵이 바뀌어 푸시될 때마다
+글을 올리거나 페이지가 바뀔 때마다 변경 URL을 검색엔진에 **즉시** 알립니다.
+```bash
+python3 tools/indexnow.py --all          # sitemap 전체
+python3 tools/indexnow.py --changed      # 직전 커밋 대비 바뀐 페이지만
+python3 tools/indexnow.py --all --dry-run # 전송 없이 목록 확인
+```
+- **자동화**: `.github/workflows/indexnow.yml` 가 `main`에 페이지/sitemap/rss가 바뀌어 푸시될 때마다
   변경 URL을 IndexNow로 통보합니다. (별도 시크릿 불필요)
-- 네이버는 [서치어드바이저](https://searchadvisor.naver.com)에 사이트 등록 + IndexNow 사용 설정을 한 번 해두면 더 확실합니다.
 
-### 2) Google Indexing API (선택, 보조)
-- ⚠️ 공식적으로 **JobPosting / BroadcastEvent** 페이지만 지원합니다. 일반 페이지는 무시될 수 있으므로,
-  구글은 **Search Console 등록 + sitemap 제출**이 정공법입니다.
-- CI 자동화: 서비스계정 JSON을 GitHub 시크릿 `GOOGLE_INDEXING_SA` 로 넣으면 워크플로가 함께 호출합니다.
+### 2) Google Indexing API (선택, 보조) — `--changed`로 쿼터 보호
+- ⚠️ 공식적으로 **JobPosting / BroadcastEvent** 페이지만 지원합니다. 일반 페이지는 무시될 수 있으므로
+  구글의 정공법은 **Search Console 등록 + sitemap 제출**입니다.
+- 사용하려면: Google Cloud에서 Indexing API 사용 설정 → 서비스계정 JSON 발급 →
+  Search Console 속성에 서비스계정 이메일을 **소유자**로 추가 → `pip install google-auth`
+  ```bash
+  export GOOGLE_APPLICATION_CREDENTIALS=서비스계정.json
+  python3 tools/google_indexing.py --changed   # 변경분만(쿼터 200/일 보호)
+  ```
+- CI 자동화: 위 JSON 전체를 GitHub 시크릿 `GOOGLE_INDEXING_SA` 로 넣으면 워크플로가 IndexNow와 함께
+  **변경분만** 호출합니다.
 
-### 3) sitemap ping
-- **Google·Bing의 sitemap ping 엔드포인트는 2023년 폐지**되었습니다. 대신 Search Console / Bing Webmaster에
-  sitemap을 한 번 제출하고, 즉시 통보는 위 IndexNow로 대체합니다.
+### 3) sitemap ping은 사용하지 않습니다
+- **Google·Bing의 sitemap ping 엔드포인트는 2023년 폐지**(404)되었습니다. 네이버·다음도 공개 ping이 없습니다.
+  대신 아래 **1회 등록** + IndexNow 자동 통보로 대체합니다.
+
+### 4) 최초 1회 등록 (가장 중요 — 배포 후)
+배포된 실제 도메인 기준으로 한 번만 해두면 이후는 자동입니다.
+
+**네이버 [서치어드바이저](https://searchadvisor.naver.com)**
+1. 사이트 등록 → **소유확인**(메인 `<head>`에 `naver-site-verification` 메타 이미 삽입됨)
+2. 요청 → **사이트맵 제출**: `https<도메인>/sitemap.xml`
+3. 요청 → **RSS 제출**: `https<도메인>/rss.xml`
+4. 설정 → **IndexNow 사용** 켜기
+
+**구글 [Search Console](https://search.google.com/search-console)**
+1. 속성 등록 → 소유확인(필요 시 `GOOGLE_VERIFY` 상수에 코드 넣고 재빌드)
+2. **사이트맵 제출**: `sitemap.xml`
+3. (선택) 빠른 색인을 원하면 §2 Indexing API 연동
+
+**빙 [Webmaster Tools](https://www.bing.com/webmasters)**: 사이트 추가 → 사이트맵 제출(IndexNow는 이미 자동).
 
 ## 배포 전 교체할 항목 (`tools/build.py` 상단 상수)
 
