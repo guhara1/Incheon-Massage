@@ -1,0 +1,9 @@
+# 인천 행정체제 개편(2026-07-01) 대비 리다이렉트 준비
+# 제물포구: 중구 원도심 + 동구 통합 예정
+# 영종구: 중구 영종·운서·용유 분리 예정
+# 검단구: 서구 검단 일대 분리 예정
+# 개편 확정 후 아래 규칙의 주석을 해제하세요.
+# /incheon/jung-gu/yeongjong-dong/   /incheon/yeongjong-gu/yeongjong-dong/   301
+# /incheon/jung-gu/unseo-dong/        /incheon/yeongjong-gu/unseo-dong/        301
+# /incheon/jung-gu/yongyu-dong/       /incheon/yeongjong-gu/yongyu-dong/       301
+# /incheon/seo-gu/geomdan-dong/       /incheon/geomdan-gu/geomdan-dong/        301
