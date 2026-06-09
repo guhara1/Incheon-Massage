@@ -1537,6 +1537,7 @@ def build_incheon_info_pages():
         title="인천 홈타이 | 자택·숙소 방문 타이마사지 예약 안내",
         desc="인천 홈타이 안내 - 자택·오피스텔·숙소로 방문하는 타이·스트레칭 계열 방문 관리입니다. 홈타이 진행 방식, 준비, 방문 관리의 장점과 자주 묻는 질문을 확인하세요.",
         eyebrow="인천 · 홈타이", h1="인천 홈타이 안내",
+        show_price=True,
         lead="자택·오피스텔·숙소로 방문해 익숙한 공간에서 받는 타이·스트레칭 계열 방문 관리입니다.",
         sections=[
             ("홈타이란 무엇인가요", [
@@ -1588,6 +1589,7 @@ def build_incheon_info_pages():
         title="인천 전지역 방문 안내 | 2군 8구 출장마사지 가능 지역",
         desc="인천 전지역 출장마사지·홈타이 방문 가능 안내 - 강화군·옹진군과 8개 구, 2026년 7월 행정체제 개편(제물포구·영종구·검단구) 예정, 도서·외곽 지역 안내를 확인하세요.",
         eyebrow="인천 · 방문 가능 지역", h1="인천 전지역 방문 가능 안내",
+        show_price=True,
         lead="인천 세븐 마사지는 강화군·옹진군 2개 군과 8개 구 등 인천 전지역으로 방문합니다.",
         sections=[
             ("2군 8구 기준 방문 안내", [
@@ -1622,6 +1624,7 @@ def build_incheon_info_pages():
         title="예약 가능 시간 | 인천 출장마사지 24시간 상담·도착 안내",
         desc="인천 출장마사지·홈타이 예약 가능 시간 안내 - 연중무휴 24시간 상담, 시간대별 특징, 지역별 평균 도착 시간, 도착 시간을 줄이는 방법과 예약 팁을 확인하세요.",
         eyebrow="인천 · 시간", h1="예약 가능 시간",
+        show_price=True,
         lead="인천 세븐 마사지는 연중무휴 24시간 예약 상담을 운영합니다.",
         sections=[
             ("운영 시간", [
@@ -1672,6 +1675,7 @@ def build_incheon_info_pages():
         title="이용 전 확인사항 | 인천 출장마사지 방문 준비 안내",
         desc="인천 출장마사지·홈타이 이용 전 확인사항 - 정확한 주소, 공동현관 출입, 주차, 조용한 공간, 예약자 연락 등 방문 준비와 결제·주의사항을 안내합니다.",
         eyebrow="인천 · 확인", h1="이용 전 확인사항",
+        show_price=True,
         lead="원활한 방문을 위해 예약 전 아래 사항을 미리 확인해 주세요.",
         sections=[
             ("방문 장소 준비", [
@@ -1728,6 +1732,7 @@ def build_incheon_info_pages():
         title="위생 및 안전 안내 | 인천 출장마사지 위생·안전 기준",
         desc="인천 출장마사지·홈타이 위생 및 안전 안내 - 용품 위생 관리, 관리사·고객 안전 가이드라인, 개인정보 보호, 비의료 서비스 고지와 건전 운영 원칙을 안내합니다.",
         eyebrow="인천 · 안전", h1="위생 및 안전 안내",
+        show_price=True,
         lead="안심하고 받으실 수 있도록 위생과 안전을 운영의 기본 기준으로 둡니다.",
         sections=[
             ("위생 관리 기준", [
@@ -1782,6 +1787,7 @@ def build_incheon_info_pages():
         title="인천 출장마사지 FAQ | 예약·지역·역세권·요금 자주 묻는 질문",
         desc="인천 출장마사지·홈타이 자주 묻는 질문 - 방문 가능 지역, 지하철역 인근 예약, 당일 예약, 테마 선택, 요금과 안전까지 자주 들어오는 질문을 한곳에 정리했습니다.",
         eyebrow="인천 · FAQ", h1="인천 출장마사지 자주 묻는 질문",
+        show_price=True,
         lead="예약·지역·역세권·테마·요금 등 자주 들어오는 질문을 한곳에 정리했습니다.",
         sections=[
             ("자주 묻는 질문을 모았습니다", [
@@ -1912,7 +1918,7 @@ def build_gu_pages():
             desc=f"{a['name']} 출장마사지·홈타이 안내 - " + ", ".join(d['name'] for d in a['dongs'][:5]) +
                  f" 등 대표 동 방문 건강관리 예약 안내입니다. {a['summary']}",
             eyebrow=f"인천 · {a['name']}", h1=f"{a['name']} 출장마사지·홈타이", lead=a["summary"],
-            sections=sections, faq=gu_faq, top_links=top_links,
+            sections=sections, faq=gu_faq, top_links=top_links, show_price=True,
             cta_title=f"{a['name']} 방문 예약을 도와드릴까요?",
             service=(f"{a['name']} 출장마사지", a["summary"]),
             extra_schema=[localbiz_ld(name=f"인천 세븐 마사지 {a['name']}",
@@ -1997,7 +2003,7 @@ def build_dong_pages():
                 sections=sections, faq=dong_faq,
                 data_note=f"{name} 일대는 평균 {d['arrival']}분 내외로 도착합니다(예약 데이터 기준). 저녁·주말은 문의가 몰려 도착이 다소 길어질 수 있어 사전 예약을 권장드립니다.",
                 service=(f"{name} 출장마사지", f"인천 {a['name']} {name} 일대 방문 건강관리 서비스"),
-                top_links=top_links,
+                top_links=top_links, show_price=True,
                 cta_title=f"{name} 방문 예약, 지금 도와드릴까요?",
                 extra_schema=[localbiz_ld(name=f"인천 세븐 마사지 {name}",
                                           area=f"인천광역시 {a['name']} {name}", path=path)])
@@ -2021,7 +2027,7 @@ def build_station_hub():
         '<h2 class="sec">지하철역별 안내</h2>'
         '<p class="sec-lead">인천1·2호선, 1·7호선, 수인분당선, 공항철도 인천권 노선별 역세권 방문 안내입니다. '
         '환승역은 여러 노선에 보이더라도 한 페이지로 안내합니다.</p>'
-        + blocks + '</div></section>' + cta_band())
+        + blocks + '</div></section>' + price_menu_block() + cta_band())
     item_list = {"@context": "https://schema.org", "@type": "CollectionPage",
         "name": "인천 지하철역별 출장마사지 안내", "url": BASE_URL + "/incheon/stations/",
         "hasPart": [{"@type": "WebPage", "name": l["name"],
@@ -2049,7 +2055,7 @@ def build_line_pages():
             f'<p class="sec-lead">{l["name"]} 인근 역세권으로 방문하는 출장마사지·홈타이 안내입니다. '
             f'환승역은 여러 노선에 보이더라도 URL은 하나만 사용합니다.</p>'
             f'<div class="grid g3" style="margin-top:26px">{st_cards}</div>'
-            '</div></section>' + cta_band())
+            '</div></section>' + price_menu_block() + cta_band())
         item_list = {"@context": "https://schema.org", "@type": "CollectionPage",
             "name": f"{l['name']} 역세권 출장마사지 안내",
             "url": BASE_URL + f"/incheon/stations/line/{key}/",
@@ -2146,6 +2152,7 @@ def build_station_pages():
             sections=sections, faq=st_faq,
             data_note=f"{nm}역 인근은 평균 {arr}분 내외로 도착합니다(예약 데이터 기준). 출구·정확한 위치에 따라 달라지니 예약 시 주소를 알려주시면 빠르게 안내해 드립니다.",
             service=(f"{nm}역 출장마사지", f"인천 {gu} {nm}역세권 방문 건강관리 서비스"),
+            show_price=True,
             cta_title=f"{nm}역 인근 방문 예약을 도와드릴까요?",
             extra_schema=[localbiz_ld(name=f"인천 세븐 마사지 {nm}역",
                                       area=f"인천광역시 {gu}", path=path)])
@@ -2216,6 +2223,7 @@ def build_theme_pages():
             title=f"{t['name']} | 인천 출장마사지·홈타이 {t['name']} 방문 안내",
             desc=f"인천 출장마사지·홈타이 {t['name']} 안내 - {t['summary']} 진행 방식, 적합한 분, 다른 테마와의 차이와 방문 안내를 확인하세요.",
             eyebrow=f"THEME · {t['kicker']}", h1=f"{t['name']} 출장마사지·홈타이", lead=t["summary"],
+            show_price=True,
             sections=sections, faq=faq,
             data_note=f"{t['name']}는 인천 전지역 방문으로 운영되며, 90분 구성 선택 비율이 가장 높습니다. 예약 시 선호 압·집중 부위를 알려주시면 방문이 매끄럽습니다.",
             service=(f"{t['name']}", f"인천 전지역 방문 {t['name']} 관리"),
@@ -2693,7 +2701,7 @@ def build_reservation():
         '<p class="sec-lead">예약 방법부터 결제·변경까지 한눈에 안내드립니다.</p>'
         '</div></section>' +
         notes_block("HOW TO BOOK", "예약 진행 안내", "아래 순서대로 진행됩니다.", notes, _id="about") +
-        faq_block(res_faq) + cta_band())
+        price_menu_block() + faq_block(res_faq) + cta_band())
     write("/reservation/", page("/reservation/",
         "예약안내 | 인천 출장마사지 예약 방법·결제 안내",
         "인천 출장마사지·홈타이 예약안내 - 예약 방법, 예약 가능 시간, 방문 가능 장소, 결제와 변경·취소 안내를 제공합니다. 연중무휴 24시간 상담.",
@@ -2722,7 +2730,7 @@ def build_guide():
         '<p class="sec-lead">처음 이용하시는 분도 안심할 수 있도록 안내드립니다.</p>'
         '</div></section>' +
         notes_block("USER GUIDE", "이용 안내", "방문 전후 확인하세요.", notes, _id="about") +
-        faq_block(guide_faq) + cta_band())
+        price_menu_block() + faq_block(guide_faq) + cta_band())
     write("/guide/", page("/guide/",
         "이용가이드 | 인천 출장마사지 방문 전 준비·주의사항",
         "인천 출장마사지·홈타이 이용가이드 - 처음 이용하시는 분을 위한 방문 전 준비사항, 위생·안전 기준, 관리 후 주의사항과 금지행위 안내입니다.",
@@ -2751,7 +2759,7 @@ def build_reviews():
         f'<div class="grid g3" style="margin-top:26px">{cards}</div>'
         f'<div class="chips" style="margin-top:24px">{area_links}</div>'
         '<p class="sec-lead" style="margin-top:24px">후기는 실제 이용 고객의 동의 하에 게시되며, 개인을 특정할 수 있는 정보는 표시하지 않습니다.</p>'
-        '</div></section>' + cta_band())
+        '</div></section>' + price_menu_block() + cta_band())
     item_list = {"@context": "https://schema.org", "@type": "ItemList",
         "name": "인천 세븐 마사지 고객후기",
         "itemListElement": [
@@ -2784,7 +2792,7 @@ def build_customer():
         f'<p class="sec-lead">전화 {PHONE_DISP} · {HOURS}</p>'
         '</div></section>' +
         notes_block("HELP", "문의 안내", "궁금한 점은 언제든 문의해 주세요.", notes, _id="inquiry") +
-        faq_block(cust_faq, "자주 묻는 질문") + cta_band())
+        price_menu_block() + faq_block(cust_faq, "자주 묻는 질문") + cta_band())
     write("/customer/", page("/customer/",
         "고객센터 | 인천 출장마사지 인천 세븐 마사지 문의·공지",
         "인천 출장마사지·홈타이 고객센터 - 공지사항, 자주 묻는 질문, 1:1 문의, 제휴·기업 문의 안내입니다. 연중무휴 24시간 상담.",
